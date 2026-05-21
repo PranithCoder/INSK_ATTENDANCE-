@@ -1564,6 +1564,10 @@ function EmployeeManager({ employees, fetchData, triggerNotification }) {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    if (dbMode === 'supabase') {
+      triggerNotification('error', 'In Live Supabase mode, employees must be created in the Supabase Authentication Dashboard first. A database trigger will automatically create their profile.');
+      return;
+    }
     setSubmitting(true);
     try {
       const mockId = `emp-${Math.random().toString(36).substr(2, 9)}`;
