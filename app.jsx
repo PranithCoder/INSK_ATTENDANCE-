@@ -285,6 +285,7 @@ function App() {
                 employees={employees} 
                 attendance={attendance} 
                 deductions={deductions}
+                triggerNotification={triggerNotification}
               />
             )}
           </main>
@@ -1781,7 +1782,7 @@ function formatISOString(date) {
   return `${y}-${m}-${d}`;
 }
 
-function ReportGenerator({ user, employees, attendance, deductions }) {
+function ReportGenerator({ user, employees, attendance, deductions, triggerNotification }) {
   const [reportMode, setReportMode] = useState('weekly'); // 'weekly' or 'monthly'
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [filterWeek, setFilterWeek] = useState(getCurrentISOWeek(new Date())); // YYYY-Www
@@ -1840,13 +1841,13 @@ function ReportGenerator({ user, employees, attendance, deductions }) {
     }
   }, [reportMode, filterMonth, filterWeek]);
 
-  // Client-side mailto dispatcher
-  const handleSendEmail = (item) => {
+  // Precomposed summary generator
+  const getSummaryMessage = (item) => {
     const rewardLine = reportMode === 'monthly'
       ? `\n- Perfect Record Reward: Rs. ${item.reward.toLocaleString()}`
       : '';
 
-    const body = `Hello ${item.name},
+    return `Hello ${item.name},
 
 Here is your attendance and payroll summary for the period ${reportPeriodLabel}:
 
@@ -1860,9 +1861,33 @@ If you have any questions, please contact the administration office.
 
 Best regards,
 INSK Attendance Team`;
+  };
 
+  // Client-side mailto dispatcher
+  const handleSendEmail = (item) => {
+    const body = getSummaryMessage(item);
     const subject = `INSK Payroll Summary - ${reportPeriodLabel}`;
     window.location.href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // Telegram dispatcher
+  const handleSendTelegram = (item) => {
+    const body = getSummaryMessage(item);
+    window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(body)}`, '_blank');
+  };
+
+  // Copy to clipboard dispatcher
+  const handleCopySummary = (item) => {
+    const body = getSummaryMessage(item);
+    navigator.clipboard.writeText(body).then(() => {
+      if (triggerNotification) {
+        triggerNotification('success', `Summary copied to clipboard for ${item.name}!`);
+      } else {
+        alert(`Summary copied to clipboard for ${item.name}!`);
+      }
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
   };
 
   return (
@@ -1995,13 +2020,29 @@ INSK Attendance Team`;
                     </td>
                     {user.is_admin && (
                       <td className="px-6 py-4 text-center no-print">
-                        <button
-                          onClick={() => handleSendEmail(item)}
-                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 mx-auto"
-                          title="Generate email summary for this employee"
-                        >
-                          ✉️ Email Summary
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5 mx-auto">
+                          <button
+                            onClick={() => handleSendEmail(item)}
+                            className="p-2 bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-xs transition-all duration-150"
+                            title="Email Summary"
+                          >
+                            ✉️
+                          </button>
+                          <button
+                            onClick={() => handleSendTelegram(item)}
+                            className="p-2 bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/30 text-sky-300 hover:text-white rounded-lg text-xs transition-all duration-150"
+                            title="Telegram Summary"
+                          >
+                            ✈️
+                          </button>
+                          <button
+                            onClick={() => handleCopySummary(item)}
+                            className="p-2 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition-all duration-150"
+                            title="Copy Summary to Clipboard"
+                          >
+                            📋
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
