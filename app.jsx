@@ -14,8 +14,8 @@ function App() {
   const [dbMode, setDbMode] = useState('local');
 
   // Supabase Credential form states
-  const [sbUrl, setSbUrl] = useState(localStorage.getItem(window.DB_KEYS.URL) || '');
-  const [sbKey, setSbKey] = useState(localStorage.getItem(window.DB_KEYS.KEY) || '');
+  const [sbUrl, setSbUrl] = useState(window.safeStorage.getItem(window.DB_KEYS.URL) || '');
+  const [sbKey, setSbKey] = useState(window.safeStorage.getItem(window.DB_KEYS.KEY) || '');
   const [showConfig, setShowConfig] = useState(false);
 
   // Load database status
@@ -124,12 +124,12 @@ function App() {
   const saveCredentials = (e) => {
     e.preventDefault();
     if (sbUrl && sbKey) {
-      localStorage.setItem(window.DB_KEYS.URL, sbUrl);
-      localStorage.setItem(window.DB_KEYS.KEY, sbKey);
+      window.safeStorage.setItem(window.DB_KEYS.URL, sbUrl);
+      window.safeStorage.setItem(window.DB_KEYS.KEY, sbKey);
       triggerNotification('success', 'Supabase credentials saved. Reconnecting...');
     } else {
-      localStorage.removeItem(window.DB_KEYS.URL);
-      localStorage.removeItem(window.DB_KEYS.KEY);
+      window.safeStorage.removeItem(window.DB_KEYS.URL);
+      window.safeStorage.removeItem(window.DB_KEYS.KEY);
       triggerNotification('success', 'Credentials cleared. Switched to Mock Local Storage.');
     }
     setShowConfig(false);
@@ -276,6 +276,7 @@ function App() {
                 employees={employees} 
                 fetchData={fetchData}
                 triggerNotification={triggerNotification}
+                dbMode={dbMode}
               />
             )}
 
@@ -562,6 +563,16 @@ function AuthScreen({ triggerNotification, showConfig, setShowConfig, sbUrl, set
               {isLogin ? 'Sign In to Account' : 'Register Account'}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <button 
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition"
+            >
+              {isLogin ? "Don't have an account? Register here" : "Already have an account? Sign in"}
+            </button>
+          </div>
 
           {/* Quick Demo Credentials for Local Mode */}
           {dbMode === 'local' && (
@@ -1555,7 +1566,7 @@ function DeductionLogger({ employees, deductions, fetchData, triggerNotification
 // =========================================================================
 // EMPLOYEE MANAGER PROFILE COMPONENT (ADMIN)
 // =========================================================================
-function EmployeeManager({ employees, fetchData, triggerNotification }) {
+function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('Engineering');
@@ -1564,19 +1575,13 @@ function EmployeeManager({ employees, fetchData, triggerNotification }) {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    if (dbMode === 'supabase') {
-      triggerNotification('error', 'In Live Supabase mode, employees must be created in the Supabase Authentication Dashboard first. A database trigger will automatically create their profile.');
-      return;
-    }
     setSubmitting(true);
     try {
-      const mockId = `emp-${Math.random().toString(36).substr(2, 9)}`;
-      const payload = { id: mockId, name, email, department };
-      
+      const payload = { name, email, department };
       const { error } = await window.supabaseClient.from('employees').insert(payload);
       if (error) throw error;
 
-      triggerNotification('success', `Employee ${name} added to roster.`);
+      triggerNotification('success', `Employee profile for ${name} successfully created.`);
       setName('');
       setEmail('');
       setShowModal(false);
@@ -1717,6 +1722,7 @@ function EmployeeManager({ employees, fetchData, triggerNotification }) {
                 </select>
               </div>
 
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button 
                   type="button" 
@@ -1790,6 +1796,7 @@ function ReportGenerator({ user, employees, attendance, deductions, triggerNotif
   const [reportMode, setReportMode] = useState('weekly'); // 'weekly' or 'monthly'
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [filterWeek, setFilterWeek] = useState(getCurrentISOWeek(new Date())); // YYYY-Www
+  const [emailProvider, setEmailProvider] = useState(window.safeStorage.getItem('insk_email_provider') || 'default');
 
   // Calculate summaries for either all employees (if admin) or just current employee
   const payrollList = useMemo(() => {
@@ -1871,7 +1878,11 @@ INSK Attendance Team`;
   const handleSendEmail = (item) => {
     const body = getSummaryMessage(item);
     const subject = `INSK Payroll Summary - ${reportPeriodLabel}`;
-    window.location.href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (emailProvider === 'gmail') {
+      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(item.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+    } else {
+      window.location.href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
   };
 
   // Telegram dispatcher
@@ -1944,6 +1955,26 @@ INSK Attendance Team`;
             />
           )}
         </div>
+
+        {/* Email Client Provider Selector */}
+        {user.is_admin && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="text-sm font-semibold text-slate-300">
+              Email App:
+            </label>
+            <select
+              value={emailProvider}
+              onChange={e => {
+                setEmailProvider(e.target.value);
+                window.safeStorage.setItem('insk_email_provider', e.target.value);
+              }}
+              className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white"
+            >
+              <option value="default">Default Client (Outlook/Mail)</option>
+              <option value="gmail">Gmail Web</option>
+            </select>
+          </div>
+        )}
 
         <button
           onClick={handlePrint}

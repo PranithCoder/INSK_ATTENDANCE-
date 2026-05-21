@@ -7,6 +7,58 @@
     KEY: 'insk_supabase_key'
   };
 
+  // Safe Storage Wrapper to handle browser Tracking Prevention or Incognito mode blocking storage
+  let storageSupported = false;
+  const memoryStore = {};
+
+  try {
+    const testKey = '__insk_storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    storageSupported = true;
+  } catch (e) {
+    console.warn('LocalStorage is blocked by tracking prevention or browser security settings. Falling back to in-memory store.', e);
+    storageSupported = false;
+  }
+
+  const safeStorage = {
+    getItem: (key) => {
+      if (storageSupported) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (e) {
+          console.warn(`Failed to read ${key} from localStorage, using memory`, e);
+        }
+      }
+      return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
+    },
+    setItem: (key, value) => {
+      if (storageSupported) {
+        try {
+          window.localStorage.setItem(key, value);
+          return;
+        } catch (e) {
+          console.warn(`Failed to write ${key} to localStorage, using memory`, e);
+        }
+      }
+      memoryStore[key] = String(value);
+    },
+    removeItem: (key) => {
+      if (storageSupported) {
+        try {
+          window.localStorage.removeItem(key);
+          return;
+        } catch (e) {
+          console.warn(`Failed to remove ${key} from localStorage, using memory`, e);
+        }
+      }
+      delete memoryStore[key];
+    }
+  };
+
+  // Expose safeStorage globally so that app.jsx can access it
+  window.safeStorage = safeStorage;
+
   // Pre-populated Mock Data
   const DEFAULT_ADMINS = [
     { email: 'admin@company.com' }
@@ -60,19 +112,19 @@
 
   // Initialize Local Storage Databases if they do not exist
   const initLocalStorageDb = () => {
-    if (!localStorage.getItem('db_admins')) {
-      localStorage.setItem('db_admins', JSON.stringify(DEFAULT_ADMINS));
+    if (!safeStorage.getItem('db_admins')) {
+      safeStorage.setItem('db_admins', JSON.stringify(DEFAULT_ADMINS));
     }
-    if (!localStorage.getItem('db_employees')) {
-      localStorage.setItem('db_employees', JSON.stringify(DEFAULT_EMPLOYEES));
+    if (!safeStorage.getItem('db_employees')) {
+      safeStorage.setItem('db_employees', JSON.stringify(DEFAULT_EMPLOYEES));
     }
-    if (!localStorage.getItem('db_attendance')) {
-      localStorage.setItem('db_attendance', JSON.stringify(DEFAULT_ATTENDANCE));
+    if (!safeStorage.getItem('db_attendance')) {
+      safeStorage.setItem('db_attendance', JSON.stringify(DEFAULT_ATTENDANCE));
     }
-    if (!localStorage.getItem('db_deductions')) {
-      localStorage.setItem('db_deductions', JSON.stringify(DEFAULT_DEDUCTIONS));
+    if (!safeStorage.getItem('db_deductions')) {
+      safeStorage.setItem('db_deductions', JSON.stringify(DEFAULT_DEDUCTIONS));
     }
-    if (!localStorage.getItem('db_auth_users')) {
+    if (!safeStorage.getItem('db_auth_users')) {
       // Mock Auth credentials lookup
       const authUsers = {
         'admin@company.com': { password: 'admin123', id: 'admin-user', email: 'admin@company.com', is_admin: true },
@@ -81,7 +133,7 @@
         'alex.jones@company.com': { password: 'password123', id: 'emp-3', email: 'alex.jones@company.com', is_admin: false },
         'sarah.connor@company.com': { password: 'password123', id: 'emp-4', email: 'sarah.connor@company.com', is_admin: false },
       };
-      localStorage.setItem('db_auth_users', JSON.stringify(authUsers));
+      safeStorage.setItem('db_auth_users', JSON.stringify(authUsers));
     }
   };
 
@@ -89,12 +141,12 @@
 
   // Local Storage Database Operations API
   const db = {
-    get: (table) => JSON.parse(localStorage.getItem(`db_${table}`) || '[]'),
-    set: (table, data) => localStorage.setItem(`db_${table}`, JSON.stringify(data)),
-    getUser: () => JSON.parse(localStorage.getItem('db_session_user') || 'null'),
-    setUser: (user) => localStorage.setItem('db_session_user', JSON.stringify(user)),
-    getAuthUsers: () => JSON.parse(localStorage.getItem('db_auth_users') || '{}'),
-    setAuthUsers: (users) => localStorage.setItem('db_auth_users', JSON.stringify(users)),
+    get: (table) => JSON.parse(safeStorage.getItem(`db_${table}`) || '[]'),
+    set: (table, data) => safeStorage.setItem(`db_${table}`, JSON.stringify(data)),
+    getUser: () => JSON.parse(safeStorage.getItem('db_session_user') || 'null'),
+    setUser: (user) => safeStorage.setItem('db_session_user', JSON.stringify(user)),
+    getAuthUsers: () => JSON.parse(safeStorage.getItem('db_auth_users') || '{}'),
+    setAuthUsers: (users) => safeStorage.setItem('db_auth_users', JSON.stringify(users)),
   };
 
   // Mock Supabase Query Builder
@@ -353,11 +405,11 @@
       },
 
       resetDatabase: () => {
-        localStorage.removeItem('db_admins');
-        localStorage.removeItem('db_employees');
-        localStorage.removeItem('db_attendance');
-        localStorage.removeItem('db_deductions');
-        localStorage.removeItem('db_auth_users');
+        safeStorage.removeItem('db_admins');
+        safeStorage.removeItem('db_employees');
+        safeStorage.removeItem('db_attendance');
+        safeStorage.removeItem('db_deductions');
+        safeStorage.removeItem('db_auth_users');
         initLocalStorageDb();
         window.dispatchEvent(new Event('auth_change'));
       }
@@ -366,12 +418,19 @@
 
   // Live client instantiation check
   const getClient = () => {
-    const savedUrl = localStorage.getItem(CONFIG_KEYS.URL);
-    const savedKey = localStorage.getItem(CONFIG_KEYS.KEY);
+    const savedUrl = safeStorage.getItem(CONFIG_KEYS.URL);
+    const savedKey = safeStorage.getItem(CONFIG_KEYS.KEY);
 
     if (savedUrl && savedKey && window.supabase && typeof window.supabase.createClient === 'function') {
       try {
-        const client = window.supabase.createClient(savedUrl, savedKey);
+        const client = window.supabase.createClient(savedUrl, savedKey, {
+          auth: {
+            storage: safeStorage,
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
         client.isMock = false;
         // Enrich client auth screen helpers
         client.resetDatabase = () => {

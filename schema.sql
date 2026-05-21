@@ -14,9 +14,8 @@ VALUES ('admin@company.com')
 ON CONFLICT (email) DO NOTHING;
 
 -- 2. Create Employees Profile Table
--- Links to Supabase Auth.users via user id
 CREATE TABLE public.employees (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     department VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -116,3 +115,28 @@ CREATE POLICY admin_all_admins ON public.admins
 -- Employee access: Can check if they themselves are admins
 CREATE POLICY employee_read_admins ON public.admins 
     FOR SELECT TO authenticated USING (email = auth.jwt() ->> 'email');
+
+-- =========================================================================
+-- AUTOMATIC EMPLOYEE PROFILE SYNC TRIGGER
+-- =========================================================================
+-- Automatically creates an employee profile row in public.employees when 
+-- a new user account is created in auth.users (e.g., via the Supabase Auth Dashboard).
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.employees (id, name, email, department)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)),
+    new.email,
+    COALESCE(new.raw_user_meta_data ->> 'department', 'Engineering')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to execute after a new auth user is inserted
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
