@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- SEO Tags -->
+  <title>Employee Attendance & Point Deduction System</title>
+  <meta name="description" content="A premium centralized web portal for HR admins and employees to track attendance logs, log infraction points, and calculate monthly payroll reports.">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Custom Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#151f32',
+              950: '#070a13',
+            },
+            brand: {
+              50: '#f5f7ff',
+              100: '#ebf0fe',
+              200: '#dce4fd',
+              300: '#c2d1fc',
+              400: '#9db4fa',
+              500: '#718cf6',
+              600: '#4d67ee',
+              700: '#3a4fe0',
+              800: '#3341b6',
+              900: '#2e3a91',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.4s ease-out',
+            'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            'scale-in': 'scaleIn 0.25s ease-out',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(16px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            scaleIn: {
+              '0%': { transform: 'scale(0.96)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen">
+
+  <!-- Root mount point for React app -->
+  <div id="root" class="min-h-screen flex flex-col md:flex-row"></div>
+
+  <!-- CDN Core Libraries (React & ReactDOM UMD Version 18) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <!-- Babel Standalone Parser for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Supabase Client Library CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Load Database Adapter Logic -->
+  <script src="supabase-client.js"></script>
+
+  <!-- Load Core React SPA Code (Compiled by Babel Standalone) -->
+  <script type="text/babel" src="app.jsx"></script>
+
+</body>
+</html>
