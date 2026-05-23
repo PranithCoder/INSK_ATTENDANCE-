@@ -1361,7 +1361,7 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
 function DeductionLogger({ employees, deductions, fetchData, triggerNotification }) {
   const [empId, setEmpId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [reasonCategory, setReasonCategory] = useState('Late Login (Over 30 Mins)');
+  const [reasonCategory, setReasonCategory] = useState('Late login (Grace period 3 minutes)');
   const [customReason, setCustomReason] = useState('');
   const [points, setPoints] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -1557,11 +1557,14 @@ function DeductionLogger({ employees, deductions, fetchData, triggerNotification
                   onChange={e => setReasonCategory(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
                 >
-                  <option value="Late Login (Over 30 Mins)">Late Login (Over 30 Mins)</option>
-                  <option value="Missed Daily Standup">Missed Daily Standup</option>
-                  <option value="Delayed Weekly Report Submit">Delayed Weekly Report Submit</option>
-                  <option value="Incomplete Task Submission">Incomplete Task Submission</option>
-                  <option value="Unprofessional Conduct">Unprofessional Conduct</option>
+                  <option value="Late login (Grace period 3 minutes)">Late login (Grace period 3 minutes)</option>
+                  <option value="Non work related acticity">Non work related acticity</option>
+                  <option value="Idle for long time">Idle for long time</option>
+                  <option value="CLOSING THE STAFF HUB">CLOSING THE STAFF HUB</option>
+                  <option value="MISSUING THE STAFFHUB">MISSUING THE STAFFHUB</option>
+                  <option value="ABSENT WITH OUT INFORMING">ABSENT WITH OUT INFORMING</option>
+                  <option value="BACK TO SEAT">BACK TO SEAT</option>
+                  <option value="LATE TO START THE TRACKER">LATE TO START THE TRACKER</option>
                 </select>
               </div>
 
