@@ -942,6 +942,84 @@ function AdminDashboard({ employees, attendance, deductions, setActiveTab }) {
           </button>
         </div>
       </div>
+
+      {/* Staff Violation & Points Summary Table */}
+      <div className="glass-panel rounded-2xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-800 mb-6 gap-4">
+          <div>
+            <h3 className="text-lg font-display font-bold text-white">Staff Points Balance Summary (Current Month)</h3>
+            <p className="text-xs text-slate-400 mt-1">Tracks total points docked (violated) and remaining out of the 10-point starting balance.</p>
+          </div>
+          <button 
+            onClick={() => setActiveTab('deductions')}
+            className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20 text-indigo-300 hover:text-white rounded-xl text-xs font-semibold transition"
+          >
+            Manage Deductions
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse custom-table">
+            <thead>
+              <tr className="bg-slate-950/40 border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                <th className="px-6 py-3">Employee Name</th>
+                <th className="px-6 py-3">Department</th>
+                <th className="px-6 py-3 text-center">Points Violated</th>
+                <th className="px-6 py-3 text-center">Points Remaining</th>
+                <th className="px-6 py-3 text-center">Standing Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-sm">
+              {employees.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-slate-500">No registered employees found.</td>
+                </tr>
+              ) : (
+                employees.map(emp => {
+                  const empDeds = monthDeductions.filter(d => d.employee_id === emp.id);
+                  const violatedPoints = empDeds.reduce((sum, d) => sum + parseInt(d.points_lost || 0), 0);
+                  const remainingPoints = Math.max(10 - violatedPoints, 0);
+                  
+                  let statusText = 'Perfect';
+                  let statusClass = 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20';
+                  if (violatedPoints > 0 && violatedPoints < 5) {
+                    statusText = 'Good';
+                    statusClass = 'bg-blue-950/60 text-blue-400 border border-blue-500/20';
+                  } else if (violatedPoints >= 5 && violatedPoints < 10) {
+                    statusText = 'Warning';
+                    statusClass = 'bg-amber-950/60 text-amber-400 border border-amber-500/20';
+                  } else if (violatedPoints >= 10) {
+                    statusText = 'Critical';
+                    statusClass = 'bg-rose-950/60 text-rose-400 border border-rose-500/20';
+                  }
+
+                  return (
+                    <tr key={emp.id} className="hover:bg-slate-900/20 transition">
+                      <td className="px-6 py-3.5">
+                        <span className="font-semibold text-white block">{emp.name}</span>
+                        <span className="text-slate-500 text-xs">{emp.email}</span>
+                      </td>
+                      <td className="px-6 py-3.5 text-slate-300">
+                        {emp.department}
+                      </td>
+                      <td className="px-6 py-3.5 text-center font-semibold text-rose-400">
+                        {violatedPoints} Pts
+                      </td>
+                      <td className="px-6 py-3.5 text-center font-semibold text-emerald-400">
+                        {remainingPoints} / 10
+                      </td>
+                      <td className="px-6 py-3.5 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
+                          {statusText}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1978,7 +2056,8 @@ INSK Attendance Team`;
                 {user.is_admin && <th className="px-6 py-4">Department</th>}
                 <th className="px-6 py-4 text-center">Days Worked</th>
                 <th className="px-6 py-4 text-center">Half Days</th>
-                <th className="px-6 py-4 text-center">Violation Points</th>
+                <th className="px-6 py-4 text-center">Points Violated</th>
+                <th className="px-6 py-4 text-center">Points Remaining</th>
                 <th className="px-6 py-4 text-right">Gross Allowance</th>
                 <th className="px-6 py-4 text-right">Deductions</th>
                 {reportMode === 'monthly' && <th className="px-6 py-4 text-right">Perfect Reward</th>}
@@ -1989,7 +2068,7 @@ INSK Attendance Team`;
             <tbody className="divide-y divide-slate-800/60">
               {payrollList.length === 0 ? (
                 <tr>
-                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 10 : 9) : (reportMode === 'monthly' ? 8 : 7)} className="px-6 py-10 text-center text-slate-500 text-sm">
+                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 11 : 10) : (reportMode === 'monthly' ? 9 : 8)} className="px-6 py-10 text-center text-slate-500 text-sm">
                     No payroll details logged for this period.
                   </td>
                 </tr>
@@ -2018,6 +2097,15 @@ INSK Attendance Team`;
                           : 'bg-slate-900 text-slate-400 print:text-slate-700'
                       }`}>
                         {item.totalPoints} Pts
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        Math.max(10 - item.totalPoints, 0) < 5 
+                          ? 'bg-rose-950/40 text-rose-400 print:text-rose-700' 
+                          : 'bg-emerald-950/60 text-emerald-400 print:text-emerald-700'
+                      }`}>
+                        {Math.max(10 - item.totalPoints, 0)} / 10
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-sm text-slate-300 print:text-black">
@@ -2061,7 +2149,7 @@ INSK Attendance Team`;
             {payrollList.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-950/40 font-bold border-t-2 border-slate-800 text-white print:text-black print:border-black">
-                  <td colSpan={user.is_admin ? 5 : 4} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
+                  <td colSpan={user.is_admin ? 6 : 5} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
                     Payroll Ledger Totals
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-sm">
