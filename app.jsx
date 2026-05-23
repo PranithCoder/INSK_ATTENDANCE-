@@ -2059,8 +2059,7 @@ INSK Attendance Team`;
                 {user.is_admin && <th className="px-6 py-4">Department</th>}
                 <th className="px-6 py-4 text-center">Days Worked</th>
                 <th className="px-6 py-4 text-center">Half Days</th>
-                <th className="px-6 py-4 text-center">Points Violated</th>
-                <th className="px-6 py-4 text-center">Points Remaining</th>
+                <th className="px-6 py-4 text-center">Violation Points</th>
                 <th className="px-6 py-4 text-right">Gross Allowance</th>
                 <th className="px-6 py-4 text-right">Deductions</th>
                 {reportMode === 'monthly' && <th className="px-6 py-4 text-right">Perfect Reward</th>}
@@ -2071,7 +2070,7 @@ INSK Attendance Team`;
             <tbody className="divide-y divide-slate-800/60">
               {payrollList.length === 0 ? (
                 <tr>
-                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 11 : 10) : (reportMode === 'monthly' ? 9 : 8)} className="px-6 py-10 text-center text-slate-500 text-sm">
+                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 10 : 9) : (reportMode === 'monthly' ? 8 : 7)} className="px-6 py-10 text-center text-slate-500 text-sm">
                     No payroll details logged for this period.
                   </td>
                 </tr>
@@ -2100,15 +2099,6 @@ INSK Attendance Team`;
                           : 'bg-slate-900 text-slate-400 print:text-slate-700'
                       }`}>
                         {item.totalPoints} Pts
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        Math.max(10 - item.totalPoints, 0) < 5 
-                          ? 'bg-rose-950/40 text-rose-400 print:text-rose-700' 
-                          : 'bg-emerald-950/60 text-emerald-400 print:text-emerald-700'
-                      }`}>
-                        {Math.max(10 - item.totalPoints, 0)} / 10
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-sm text-slate-300 print:text-black">
@@ -2152,7 +2142,7 @@ INSK Attendance Team`;
             {payrollList.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-950/40 font-bold border-t-2 border-slate-800 text-white print:text-black print:border-black">
-                  <td colSpan={user.is_admin ? 6 : 5} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
+                  <td colSpan={user.is_admin ? 5 : 4} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
                     Payroll Ledger Totals
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-sm">
