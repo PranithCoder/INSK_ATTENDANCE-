@@ -61,18 +61,25 @@ function App() {
     window.addEventListener('supabase_reconnect', handleReconnect);
     
     // Subscribe to auth changes
-    const { data: { subscription } } = window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = window.supabaseClient.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        const adminsRes = await window.supabaseClient.from('admins').select('*');
-        const adminsList = adminsRes.data || [];
-        const isAdmin = adminsList.some(a => a.email.toLowerCase() === session.user.email.toLowerCase()) || session.user.is_admin;
-        if (isAdmin) {
-          setUser({ ...session.user, is_admin: true });
-        } else {
-          await window.supabaseClient.auth.signOut();
-          setUser(null);
-          triggerNotification('error', 'Access Denied: Only administrators can sign in.');
-        }
+        // Defer database queries to prevent Web Locks deadlock in Supabase client
+        setTimeout(async () => {
+          try {
+            const adminsRes = await window.supabaseClient.from('admins').select('*');
+            const adminsList = adminsRes.data || [];
+            const isAdmin = adminsList.some(a => a.email.toLowerCase() === session.user.email.toLowerCase()) || session.user.is_admin;
+            if (isAdmin) {
+              setUser({ ...session.user, is_admin: true });
+            } else {
+              await window.supabaseClient.auth.signOut();
+              setUser(null);
+              triggerNotification('error', 'Access Denied: Only administrators can sign in.');
+            }
+          } catch (err) {
+            console.error("Auth change check failed", err);
+          }
+        }, 0);
       } else {
         setUser(null);
       }
