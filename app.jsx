@@ -383,12 +383,14 @@ function App() {
 // Calculates attendance rates and pay variables per employee.
 // Deducts Rs. 100 per point, gives Rs. 500 per day worked (capped weekly at Rs. 3,000)
 function computePayrollData(employeeId, attendanceList, deductionsList, isMonthly = true) {
-  const empAttendance = attendanceList.filter(a => a.employee_id === employeeId && a.status === 'Present');
+  const empAttendance = attendanceList.filter(a => a.employee_id === employeeId);
+  const presentDaysList = empAttendance.filter(a => a.status === 'Present');
+  const halfDaysList = empAttendance.filter(a => a.status === 'Half Day');
   const empDeductions = deductionsList.filter(d => d.employee_id === employeeId);
 
   // Group Present days by Calendar Week (Monday to Sunday)
   const weeklyAttendanceCount = {};
-  empAttendance.forEach(record => {
+  presentDaysList.forEach(record => {
     const recDate = new Date(record.date);
     const day = recDate.getDay();
     const diff = recDate.getDate() - day + (day === 0 ? -6 : 1); // Get Monday date
@@ -412,11 +414,12 @@ function computePayrollData(employeeId, attendanceList, deductionsList, isMonthl
   const totalDeductions = totalPoints * 100;
   
   // Reward: if they secured 10 points (0 points lost) in a monthly period, they get Rs. 1000 reward
-  const reward = (isMonthly && totalPoints === 0 && empAttendance.length > 0) ? 1000 : 0;
+  const reward = (isMonthly && totalPoints === 0 && (presentDaysList.length > 0 || halfDaysList.length > 0)) ? 1000 : 0;
   const netPay = totalAllowance - totalDeductions + reward;
 
   return {
-    daysWorked: empAttendance.length,
+    daysWorked: presentDaysList.length,
+    halfDays: halfDaysList.length,
     totalPoints,
     totalAllowance,
     totalDeductions,
@@ -690,8 +693,9 @@ function AdminDashboard({ employees, attendance, deductions, setActiveTab }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayAttendance = attendance.filter(a => a.date === todayStr);
   const presentToday = todayAttendance.filter(a => a.status === 'Present').length;
+  const halfDayToday = todayAttendance.filter(a => a.status === 'Half Day').length;
   const attendanceRate = totalEmployees > 0 
-    ? Math.round((presentToday / totalEmployees) * 100) 
+    ? Math.round(((presentToday + halfDayToday) / totalEmployees) * 100) 
     : 0;
 
   const totalPoints = deductions.reduce((sum, d) => sum + parseInt(d.points_lost || 0), 0);
@@ -812,7 +816,7 @@ function AdminDashboard({ employees, attendance, deductions, setActiveTab }) {
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Attendance Rate (Today)</span>
           <h3 className="text-3xl font-display font-extrabold text-white mt-2">{attendanceRate}%</h3>
           <div className="mt-3 flex items-center text-xs text-emerald-400 font-bold cursor-pointer" onClick={() => setActiveTab('attendance')}>
-            {presentToday} of {totalEmployees} Present today →
+            {presentToday} Present, {halfDayToday} Half Day of {totalEmployees} today →
           </div>
         </div>
 
@@ -1189,6 +1193,7 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
                   
                   // Compute historical stats
                   const workedRecords = attendance.filter(a => a.employee_id === emp.id && a.status === 'Present');
+                  const halfDayRecords = attendance.filter(a => a.employee_id === emp.id && a.status === 'Half Day');
                   
                   return (
                     <tr key={emp.id} className="hover:bg-slate-900/30 transition">
@@ -1201,6 +1206,7 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-xs text-slate-400 block">{workedRecords.length} Present Days Logged</span>
+                        <span className="text-xs text-slate-500 block mt-0.5">{halfDayRecords.length} Half Days Logged</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center items-center gap-2">
@@ -1214,6 +1220,17 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
                             }`}
                           >
                             Present
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(emp.id, 'Half Day')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                              currentStatus === 'Half Day'
+                                ? 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-md shadow-amber-950/20'
+                                : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
+                            }`}
+                          >
+                            Half Day
                           </button>
                           <button
                             type="button"
@@ -1798,6 +1815,7 @@ function ReportGenerator({ user, employees, attendance, deductions, triggerNotif
 Here is your attendance and payroll summary for the period ${reportPeriodLabel}:
 
 - Days Worked: ${item.daysWorked} Days
+- Half Days: ${item.halfDays} Days
 - Violation Points Lost: ${item.totalPoints} Pts
 - Gross Allowance: Rs. ${item.totalAllowance.toLocaleString()}
 - Total Deductions: Rs. ${item.totalDeductions.toLocaleString()}${rewardLine}
@@ -1907,6 +1925,7 @@ INSK Attendance Team`;
                 <th className="px-6 py-4">Employee</th>
                 {user.is_admin && <th className="px-6 py-4">Department</th>}
                 <th className="px-6 py-4 text-center">Days Worked</th>
+                <th className="px-6 py-4 text-center">Half Days</th>
                 <th className="px-6 py-4 text-center">Violation Points</th>
                 <th className="px-6 py-4 text-right">Gross Allowance</th>
                 <th className="px-6 py-4 text-right">Deductions</th>
@@ -1918,7 +1937,7 @@ INSK Attendance Team`;
             <tbody className="divide-y divide-slate-800/60">
               {payrollList.length === 0 ? (
                 <tr>
-                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 9 : 8) : (reportMode === 'monthly' ? 7 : 6)} className="px-6 py-10 text-center text-slate-500 text-sm">
+                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 10 : 9) : (reportMode === 'monthly' ? 8 : 7)} className="px-6 py-10 text-center text-slate-500 text-sm">
                     No payroll details logged for this period.
                   </td>
                 </tr>
@@ -1936,6 +1955,9 @@ INSK Attendance Team`;
                     )}
                     <td className="px-6 py-4 text-center">
                       <span className="text-slate-300 text-sm font-semibold print:text-black">{item.daysWorked} Days</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-slate-300 text-sm font-semibold print:text-black">{item.halfDays} Days</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${
@@ -1987,7 +2009,7 @@ INSK Attendance Team`;
             {payrollList.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-950/40 font-bold border-t-2 border-slate-800 text-white print:text-black print:border-black">
-                  <td colSpan={user.is_admin ? 4 : 3} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
+                  <td colSpan={user.is_admin ? 5 : 4} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
                     Payroll Ledger Totals
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-sm">
