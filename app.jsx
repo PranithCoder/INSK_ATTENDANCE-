@@ -1525,6 +1525,7 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
   const [department, setDepartment] = useState('Marketing');
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
@@ -1541,6 +1542,27 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
       fetchData();
     } catch (err) {
       triggerNotification('error', err.message || 'Failed to add employee profile.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditEmployee = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload = { name, email, department };
+      const { error } = await window.supabaseClient.from('employees').update(payload).eq('id', editingEmployee.id);
+      if (error) throw error;
+
+      triggerNotification('success', `Employee profile for ${name} successfully updated.`);
+      setName('');
+      setEmail('');
+      setEditingEmployee(null);
+      setShowModal(false);
+      fetchData();
+    } catch (err) {
+      triggerNotification('error', err.message || 'Failed to update employee profile.');
     } finally {
       setSubmitting(false);
     }
@@ -1564,7 +1586,13 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-display font-bold text-white">Registered Employee Profiles</h3>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingEmployee(null);
+            setName('');
+            setEmail('');
+            setDepartment('Marketing');
+            setShowModal(true);
+          }}
           className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transform hover:-translate-y-0.5 transition"
         >
           ➕ Register New Employee
@@ -1606,12 +1634,26 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
                       {emp.email}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                        className="px-3 py-1.5 bg-transparent hover:bg-rose-950/30 text-rose-500 hover:text-rose-400 rounded-lg text-xs font-bold transition"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingEmployee(emp);
+                            setName(emp.name);
+                            setEmail(emp.email);
+                            setDepartment(emp.department);
+                            setShowModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-transparent hover:bg-indigo-950/30 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-bold transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                          className="px-3 py-1.5 bg-transparent hover:bg-rose-950/30 text-rose-500 hover:text-rose-400 rounded-lg text-xs font-bold transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1621,12 +1663,14 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
         </div>
       </div>
 
-      {/* Add Employee Modal */}
+      {/* Add / Edit Employee Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-scale-in">
             <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-4">
-              <h3 className="text-lg font-display font-bold text-white">Register New Employee Profile</h3>
+              <h3 className="text-lg font-display font-bold text-white">
+                {editingEmployee ? 'Edit Employee Profile' : 'Register New Employee Profile'}
+              </h3>
               <button 
                 onClick={() => setShowModal(false)}
                 className="text-slate-400 hover:text-white text-lg"
@@ -1635,7 +1679,7 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
               </button>
             </div>
             
-            <form onSubmit={handleAddEmployee} className="space-y-4">
+            <form onSubmit={editingEmployee ? handleEditEmployee : handleAddEmployee} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 tracking-wider">Full Name</label>
                 <input 
@@ -1691,7 +1735,7 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transform hover:-translate-y-0.5 transition duration-150 flex items-center gap-2"
                 >
                   {submitting ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div> : null}
-                  Create Profile
+                  {editingEmployee ? 'Save Changes' : 'Create Profile'}
                 </button>
               </div>
             </form>
