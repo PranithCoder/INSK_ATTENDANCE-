@@ -18,6 +18,12 @@ function App() {
   const [sbKey, setSbKey] = useState(window.safeStorage.getItem(window.DB_KEYS.KEY) || '');
   const [showConfig, setShowConfig] = useState(false);
 
+  // Helper for notifications
+  const triggerNotification = (type, text) => {
+    setNotify({ type, text });
+    setTimeout(() => setNotify(null), 4000);
+  };
+
   // Load database status
   useEffect(() => {
     const checkAuth = async () => {
@@ -29,7 +35,13 @@ function App() {
           const adminsRes = await window.supabaseClient.from('admins').select('*');
           const adminsList = adminsRes.data || [];
           const isAdmin = adminsList.some(a => a.email.toLowerCase() === user.email.toLowerCase()) || user.is_admin;
-          setUser({ ...user, is_admin: isAdmin });
+          if (isAdmin) {
+            setUser({ ...user, is_admin: true });
+          } else {
+            await window.supabaseClient.auth.signOut();
+            setUser(null);
+            triggerNotification('error', 'Access Denied: Only administrators can sign in.');
+          }
         } else {
           setUser(null);
         }
@@ -54,7 +66,13 @@ function App() {
         const adminsRes = await window.supabaseClient.from('admins').select('*');
         const adminsList = adminsRes.data || [];
         const isAdmin = adminsList.some(a => a.email.toLowerCase() === session.user.email.toLowerCase()) || session.user.is_admin;
-        setUser({ ...session.user, is_admin: isAdmin });
+        if (isAdmin) {
+          setUser({ ...session.user, is_admin: true });
+        } else {
+          await window.supabaseClient.auth.signOut();
+          setUser(null);
+          triggerNotification('error', 'Access Denied: Only administrators can sign in.');
+        }
       } else {
         setUser(null);
       }
@@ -113,12 +131,6 @@ function App() {
   useEffect(() => {
     fetchData();
   }, [user]);
-
-  // Helper for notifications
-  const triggerNotification = (type, text) => {
-    setNotify({ type, text });
-    setTimeout(() => setNotify(null), 4000);
-  };
 
   // Helper to save Supabase keys
   const saveCredentials = (e) => {
@@ -428,48 +440,33 @@ function getWeekRange(dateString) {
 // AUTHENTICATION SCREEN COMPONENT
 // =========================================================================
 function AuthScreen({ triggerNotification, showConfig, setShowConfig, sbUrl, setSbUrl, sbKey, setSbKey, saveCredentials, dbMode }) {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [department, setDepartment] = useState('Engineering');
   const [authLoading, setAuthLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
     try {
-      if (isLogin) {
-        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        triggerNotification('success', 'Logged in successfully!');
-      } else {
-        const { data, error } = await window.supabaseClient.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name, department }
-          }
-        });
-        if (error) throw error;
-        triggerNotification('success', 'Account registered. Logged in!');
+      const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      
+      const userObj = data.user;
+      if (userObj) {
+        const adminsRes = await window.supabaseClient.from('admins').select('*');
+        const adminsList = adminsRes.data || [];
+        const isAdmin = adminsList.some(a => a.email.toLowerCase() === userObj.email.toLowerCase()) || userObj.is_admin;
+        if (!isAdmin) {
+          await window.supabaseClient.auth.signOut();
+          throw new Error('Access Denied: Only administrators can sign in.');
+        }
       }
+      triggerNotification('success', 'Logged in successfully!');
     } catch (err) {
       triggerNotification('error', err.message || 'Authentication error occurred.');
     } finally {
       setAuthLoading(false);
     }
-  };
-
-  const loadDemoCredentials = (role) => {
-    if (role === 'admin') {
-      setEmail('admin@company.com');
-      setPassword('admin123');
-    } else {
-      setEmail('john.doe@company.com');
-      setPassword('password123');
-    }
-    triggerNotification('success', `Populated ${role} credentials.`);
   };
 
   return (
@@ -498,36 +495,6 @@ function AuthScreen({ triggerNotification, showConfig, setShowConfig, sbUrl, set
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 tracking-wider">Full Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={name} 
-                    onChange={e => setName(e.target.value)} 
-                    placeholder="Enter name"
-                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 tracking-wider">Department</label>
-                  <select 
-                    value={department} 
-                    onChange={e => setDepartment(e.target.value)}
-                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white transition"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Operations">Operations</option>
-                    <option value="HR/Admin">HR/Admin</option>
-                  </select>
-                </div>
-              </>
-            )}
-
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 tracking-wider">Email Address</label>
               <input 
@@ -560,40 +527,9 @@ function AuthScreen({ triggerNotification, showConfig, setShowConfig, sbUrl, set
               {authLoading ? (
                 <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
               ) : null}
-              {isLogin ? 'Sign In to Account' : 'Register Account'}
+              Sign In to Account
             </button>
           </form>
-
-          <div className="mt-4 text-center">
-            <button 
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition"
-            >
-              {isLogin ? "Don't have an account? Register here" : "Already have an account? Sign in"}
-            </button>
-          </div>
-
-          {/* Quick Demo Credentials for Local Mode */}
-          {dbMode === 'local' && (
-            <div className="mt-6 pt-5 border-t border-slate-800/80">
-              <span className="block text-center text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Quick Demo Credentials (Local DB)</span>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => loadDemoCredentials('admin')}
-                  className="flex-1 py-2 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800/80 rounded-xl text-xs font-semibold transition"
-                >
-                  👤 HR Admin
-                </button>
-                <button 
-                  onClick={() => loadDemoCredentials('employee')}
-                  className="flex-1 py-2 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800/80 rounded-xl text-xs font-semibold transition"
-                >
-                  👥 Staff Member
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Database Config Link */}
@@ -1796,7 +1732,6 @@ function ReportGenerator({ user, employees, attendance, deductions, triggerNotif
   const [reportMode, setReportMode] = useState('weekly'); // 'weekly' or 'monthly'
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [filterWeek, setFilterWeek] = useState(getCurrentISOWeek(new Date())); // YYYY-Www
-  const [emailProvider, setEmailProvider] = useState(window.safeStorage.getItem('insk_email_provider') || 'default');
 
   // Calculate summaries for either all employees (if admin) or just current employee
   const payrollList = useMemo(() => {
@@ -1878,17 +1813,7 @@ INSK Attendance Team`;
   const handleSendEmail = (item) => {
     const body = getSummaryMessage(item);
     const subject = `INSK Payroll Summary - ${reportPeriodLabel}`;
-    if (emailProvider === 'gmail') {
-      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(item.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
-    } else {
-      window.location.href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    }
-  };
-
-  // Telegram dispatcher
-  const handleSendTelegram = (item) => {
-    const body = getSummaryMessage(item);
-    window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(body)}`, '_blank');
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(item.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   // Copy to clipboard dispatcher
@@ -1956,25 +1881,7 @@ INSK Attendance Team`;
           )}
         </div>
 
-        {/* Email Client Provider Selector */}
-        {user.is_admin && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label className="text-sm font-semibold text-slate-300">
-              Email App:
-            </label>
-            <select
-              value={emailProvider}
-              onChange={e => {
-                setEmailProvider(e.target.value);
-                window.safeStorage.setItem('insk_email_provider', e.target.value);
-              }}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white"
-            >
-              <option value="default">Default Client (Outlook/Mail)</option>
-              <option value="gmail">Gmail Web</option>
-            </select>
-          </div>
-        )}
+
 
         <button
           onClick={handlePrint}
@@ -2062,13 +1969,6 @@ INSK Attendance Team`;
                             title="Email Summary"
                           >
                             ✉️
-                          </button>
-                          <button
-                            onClick={() => handleSendTelegram(item)}
-                            className="p-2 bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/30 text-sky-300 hover:text-white rounded-lg text-xs transition-all duration-150"
-                            title="Telegram Summary"
-                          >
-                            ✈️
                           </button>
                           <button
                             onClick={() => handleCopySummary(item)}
