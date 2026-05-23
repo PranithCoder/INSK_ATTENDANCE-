@@ -1522,7 +1522,7 @@ function DeductionLogger({ employees, deductions, fetchData, triggerNotification
 function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [department, setDepartment] = useState('Engineering');
+  const [department, setDepartment] = useState('Marketing');
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -1667,11 +1667,12 @@ function EmployeeManager({ employees, fetchData, triggerNotification, dbMode }) 
                   onChange={e => setDepartment(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-white"
                 >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Sales">Sales</option>
                   <option value="Marketing">Marketing</option>
-                  <option value="Operations">Operations</option>
-                  <option value="HR/Admin">HR/Admin</option>
+                  <option value="Development">Development</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Hr">Hr</option>
+                  <option value="SEO">SEO</option>
+                  <option value="Designers">Designers</option>
                 </select>
               </div>
 

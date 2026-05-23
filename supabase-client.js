@@ -65,10 +65,10 @@
   ];
 
   const DEFAULT_EMPLOYEES = [
-    { id: 'emp-1', name: 'John Doe', department: 'Engineering', email: 'john.doe@company.com' },
-    { id: 'emp-2', name: 'Jane Smith', department: 'Sales', email: 'jane.smith@company.com' },
+    { id: 'emp-1', name: 'John Doe', department: 'Development', email: 'john.doe@company.com' },
+    { id: 'emp-2', name: 'Jane Smith', department: 'Hr', email: 'jane.smith@company.com' },
     { id: 'emp-3', name: 'Alex Jones', department: 'Marketing', email: 'alex.jones@company.com' },
-    { id: 'emp-4', name: 'Sarah Connor', department: 'Operations', email: 'sarah.connor@company.com' }
+    { id: 'emp-4', name: 'Sarah Connor', department: 'Admin', email: 'sarah.connor@company.com' }
   ];
 
   // Helper to generate dates for past 10 days
