@@ -1127,7 +1127,7 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
         status: logState[empId]
       }));
 
-      const { error } = await window.supabaseClient.from('attendance').upsert(recordsToUpsert);
+      const { error } = await window.supabaseClient.from('attendance').upsert(recordsToUpsert, { onConflict: 'employee_id,date' });
       if (error) throw error;
       
       triggerNotification('success', 'Attendance matrix successfully updated.');
