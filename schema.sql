@@ -27,7 +27,7 @@ CREATE TABLE public.attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    status VARCHAR(10) CHECK (status IN ('Present', 'Absent', 'Half Day')) NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('Present', 'Absent', 'Half Day', 'Rest Day', 'Medical', 'Casual')) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     CONSTRAINT unique_employee_date UNIQUE (employee_id, date)
 );

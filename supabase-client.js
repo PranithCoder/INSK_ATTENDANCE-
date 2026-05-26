@@ -74,7 +74,7 @@
   // Helper to generate dates for past 10 days
   const generatePastAttendance = () => {
     const records = [];
-    const statuses = ['Present', 'Present', 'Present', 'Present', 'Present', 'Absent', 'Present']; // Weighted present
+    const statuses = ['Present', 'Present', 'Present', 'Present', 'Half Day', 'Rest Day', 'Medical', 'Casual']; // Weighted with detailed statuses
     const employees = ['emp-1', 'emp-2', 'emp-3', 'emp-4'];
     
     // Past 10 days

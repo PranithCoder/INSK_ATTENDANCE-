@@ -446,6 +446,36 @@ function getWeekRange(dateString) {
   return `${start.toLocaleDateString(undefined, {month:'short', day:'numeric'})} - ${end.toLocaleDateString(undefined, {month:'short', day:'numeric'})}`;
 }
 
+// Helper to render status badges uniformly
+function getStatusBadge(status) {
+  let classes = 'bg-rose-950/60 text-rose-400 border border-rose-500/20';
+  let label = status;
+  
+  if (status === 'Present') {
+    classes = 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20';
+  } else if (status === 'Half Day') {
+    classes = 'bg-amber-950/60 text-amber-400 border border-amber-500/20';
+  } else if (status === 'Rest Day') {
+    classes = 'bg-blue-950/60 text-blue-400 border border-blue-500/20';
+    label = 'Rest Day';
+  } else if (status === 'Medical') {
+    classes = 'bg-violet-950/60 text-violet-300 border border-violet-500/30';
+    label = 'Medical Leave';
+  } else if (status === 'Casual') {
+    classes = 'bg-rose-950/60 text-rose-400 border border-rose-500/20';
+    label = 'Casual Leave';
+  } else if (status === 'Absent') {
+    classes = 'bg-rose-950/60 text-rose-400 border border-rose-500/20';
+    label = 'Absent (Unspecified)';
+  }
+  
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${classes}`}>
+      {label}
+    </span>
+  );
+}
+
 // =========================================================================
 // AUTHENTICATION SCREEN COMPONENT
 // =========================================================================
@@ -1128,13 +1158,7 @@ function EmployeeDashboard({ user, employees, attendance, deductions, setActiveT
                     <span className="text-sm font-semibold text-slate-300">{att.date}</span>
                     <p className="text-[10px] text-slate-500">ISO Week: {getWeekRange(att.date)}</p>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    att.status === 'Present' 
-                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20' 
-                      : 'bg-rose-950/60 text-rose-400 border border-rose-500/20'
-                  }`}>
-                    {att.status}
-                  </span>
+                  {getStatusBadge(att.status)}
                 </div>
               ))
             )}
@@ -1246,7 +1270,7 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
           </button>
           <button 
             type="button" 
-            onClick={() => handleMarkAll('Absent')}
+            onClick={() => handleMarkAll('Casual')}
             className="px-3.5 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-xs font-bold rounded-xl text-slate-300 transition"
           >
             ✕ Mark All Absent
@@ -1294,40 +1318,79 @@ function AttendanceLogger({ employees, attendance, fetchData, triggerNotificatio
                         <span className="text-xs text-slate-500 block mt-0.5">{halfDayRecords.length} Half Days Logged</span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-center items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(emp.id, 'Present')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                              currentStatus === 'Present'
-                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/20'
-                                : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
-                            }`}
-                          >
-                            Present
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(emp.id, 'Half Day')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                              currentStatus === 'Half Day'
-                                ? 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-md shadow-amber-950/20'
-                                : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
-                            }`}
-                          >
-                            Half Day
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(emp.id, 'Absent')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                              currentStatus === 'Absent'
-                                ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-md shadow-rose-950/20'
-                                : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
-                            }`}
-                          >
-                            Absent
-                          </button>
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex justify-center items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(emp.id, 'Present')}
+                              className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                                currentStatus === 'Present'
+                                  ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-950/20'
+                                  : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
+                              }`}
+                            >
+                              Present
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(emp.id, 'Half Day')}
+                              className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                                currentStatus === 'Half Day'
+                                  ? 'bg-amber-950/80 text-amber-400 border-amber-500/40 shadow-md shadow-amber-950/20'
+                                  : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
+                              }`}
+                            >
+                              Half Day
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(emp.id, ['Rest Day', 'Medical', 'Casual', 'Absent'].includes(currentStatus) ? currentStatus : 'Casual')}
+                              className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                                ['Rest Day', 'Medical', 'Casual', 'Absent'].includes(currentStatus)
+                                  ? 'bg-rose-950/80 text-rose-400 border-rose-500/40 shadow-md shadow-rose-950/20'
+                                  : 'bg-transparent text-slate-500 border-slate-800/80 hover:text-slate-300'
+                              }`}
+                            >
+                              Absent
+                            </button>
+                          </div>
+                          {['Rest Day', 'Medical', 'Casual', 'Absent'].includes(currentStatus) && (
+                            <div className="flex items-center gap-1.5 bg-slate-950/40 p-1 rounded-lg border border-slate-800 animate-fade-in no-print">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(emp.id, 'Rest Day')}
+                                className={`px-2.5 py-1 rounded text-[10px] font-bold transition ${
+                                  currentStatus === 'Rest Day'
+                                    ? 'bg-blue-600 text-white shadow'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                Rest Day
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(emp.id, 'Medical')}
+                                className={`px-2.5 py-1 rounded text-[10px] font-bold transition ${
+                                  currentStatus === 'Medical'
+                                    ? 'bg-violet-600 text-white shadow'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                Medical
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(emp.id, 'Casual')}
+                                className={`px-2.5 py-1 rounded text-[10px] font-bold transition ${
+                                  currentStatus === 'Casual'
+                                    ? 'bg-rose-600 text-white shadow'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                Casual
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1879,12 +1942,32 @@ function formatISOString(date) {
 }
 
 function ReportGenerator({ user, employees, attendance, deductions, triggerNotification }) {
-  const [reportMode, setReportMode] = useState('weekly'); // 'weekly' or 'monthly'
+  const [reportMode, setReportMode] = useState('weekly'); // 'weekly', 'monthly', or 'leave_summary'
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [filterWeek, setFilterWeek] = useState(getCurrentISOWeek(new Date())); // YYYY-Www
+  const [filterEmployeeId, setFilterEmployeeId] = useState(user.is_admin && employees.length > 0 ? employees[0].id : user.id);
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1); // First day of current month
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0]; // Today
+  });
+
+  // Sync default employee selection
+  useEffect(() => {
+    if (user && !user.is_admin) {
+      setFilterEmployeeId(user.id);
+    } else if (employees.length > 0 && !filterEmployeeId) {
+      setFilterEmployeeId(employees[0].id);
+    }
+  }, [user, employees]);
 
   // Calculate summaries for either all employees (if admin) or just current employee
   const payrollList = useMemo(() => {
+    if (reportMode === 'leave_summary') return [];
+
     let periodAttendance = [];
     let periodDeductions = [];
     const isMonthly = reportMode === 'monthly';
@@ -1911,19 +1994,70 @@ function ReportGenerator({ user, employees, attendance, deductions, triggerNotif
     });
   }, [employees, attendance, deductions, reportMode, filterMonth, filterWeek, user]);
 
+  // Compute leave summary data
+  const leaveSummaryData = useMemo(() => {
+    if (reportMode !== 'leave_summary') return null;
+
+    const empId = user.is_admin ? filterEmployeeId : user.id;
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return null;
+
+    const empRecords = attendance.filter(a => 
+      a.employee_id === empId && 
+      a.date >= startDate && 
+      a.date <= endDate
+    );
+
+    // Sort by date descending
+    empRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let presentCount = 0;
+    let halfDayCount = 0;
+    let restDayCount = 0;
+    let medicalCount = 0;
+    let casualCount = 0;
+    let unspecifiedAbsentCount = 0;
+
+    empRecords.forEach(r => {
+      if (r.status === 'Present') presentCount++;
+      else if (r.status === 'Half Day') halfDayCount++;
+      else if (r.status === 'Rest Day') restDayCount++;
+      else if (r.status === 'Medical') medicalCount++;
+      else if (r.status === 'Casual') casualCount++;
+      else if (r.status === 'Absent') unspecifiedAbsentCount++;
+    });
+
+    const totalLeaves = restDayCount + medicalCount + casualCount + unspecifiedAbsentCount;
+    const totalDays = empRecords.length;
+
+    return {
+      employee: emp,
+      records: empRecords,
+      presentCount,
+      halfDayCount,
+      restDayCount,
+      medicalCount,
+      casualCount,
+      unspecifiedAbsentCount,
+      totalLeaves,
+      totalDays
+    };
+  }, [attendance, employees, reportMode, filterEmployeeId, startDate, endDate, user]);
+
   const handlePrint = () => {
     window.print();
   };
 
   // Sum totals of reports
   const summaryTotals = useMemo(() => {
+    if (reportMode === 'leave_summary') return { allowances: 0, deductions: 0, reward: 0, net: 0 };
     return payrollList.reduce((totals, item) => ({
       allowances: totals.allowances + item.totalAllowance,
       deductions: totals.deductions + item.totalDeductions,
       reward: totals.reward + (item.reward || 0),
       net: totals.net + item.netPay
     }), { allowances: 0, deductions: 0, reward: 0, net: 0 });
-  }, [payrollList]);
+  }, [payrollList, reportMode]);
 
   // Formatted date string for printable header
   const reportPeriodLabel = useMemo(() => {
@@ -1932,10 +2066,12 @@ function ReportGenerator({ user, employees, attendance, deductions, triggerNotif
         month: 'long', 
         year: 'numeric'
       });
-    } else {
+    } else if (reportMode === 'weekly') {
       return `Week ${filterWeek} (${getISOWeekRangeLabel(filterWeek)})`;
+    } else {
+      return `${startDate} to ${endDate}`;
     }
-  }, [reportMode, filterMonth, filterWeek]);
+  }, [reportMode, filterMonth, filterWeek, startDate, endDate]);
 
   // Precomposed summary generator
   const getSummaryMessage = (item) => {
@@ -1987,7 +2123,7 @@ INSK Attendance Team`;
       <div className="glass-panel rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 no-print">
         
         {/* Toggle Mode Buttons */}
-        <div className="flex items-center bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 self-start">
+        <div className="flex flex-wrap items-center bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 self-start gap-1">
           <button
             onClick={() => setReportMode('weekly')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-200 ${
@@ -2008,164 +2144,296 @@ INSK Attendance Team`;
           >
             Monthly Payouts
           </button>
+          <button
+            onClick={() => setReportMode('leave_summary')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-200 ${
+              reportMode === 'leave_summary'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Leave & Attendance Summary
+          </button>
         </div>
 
-        {/* Date Selector input */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <label className="text-sm font-semibold text-slate-300">
-            Select {reportMode === 'weekly' ? 'Week' : 'Month'}:
-          </label>
-          {reportMode === 'weekly' ? (
-            <input 
-              type="week" 
-              value={filterWeek} 
-              onChange={e => setFilterWeek(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white min-w-[200px]"
-            />
-          ) : (
-            <input 
-              type="month" 
-              value={filterMonth} 
-              onChange={e => setFilterMonth(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white min-w-[200px]"
-            />
-          )}
-        </div>
-
-
+        {/* Dynamic Filters depending on mode */}
+        {reportMode === 'leave_summary' ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 justify-end">
+            {user.is_admin && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Employee:</label>
+                <select
+                  value={filterEmployeeId}
+                  onChange={e => setFilterEmployeeId(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500 text-white min-w-[150px]"
+                >
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">From:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 text-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">To:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 text-white"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="text-sm font-semibold text-slate-300">
+              Select {reportMode === 'weekly' ? 'Week' : 'Month'}:
+            </label>
+            {reportMode === 'weekly' ? (
+              <input 
+                type="week" 
+                value={filterWeek} 
+                onChange={e => setFilterWeek(e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white min-w-[200px]"
+              />
+            ) : (
+              <input 
+                type="month" 
+                value={filterMonth} 
+                onChange={e => setFilterMonth(e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white min-w-[200px]"
+              />
+            )}
+          </div>
+        )}
 
         <button
           onClick={handlePrint}
           className="px-5 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 self-start lg:self-center"
         >
-          🖨 Print Payroll Ledger
+          🖨 {reportMode === 'leave_summary' ? 'Print Leave Summary' : 'Print Payroll Ledger'}
         </button>
       </div>
 
-      {/* Printable Sheet Header (hidden by default, shown during print media) */}
+      {/* Printable Sheet Header */}
       <div className="hidden print-only text-center border-b pb-4 mb-6">
-        <h2 className="text-2xl font-bold uppercase tracking-wide text-black">Company {reportMode === 'weekly' ? 'Weekly' : 'Monthly'} Payroll Ledger</h2>
-        <p className="text-sm text-slate-700 mt-1">Statement Period: {reportPeriodLabel}</p>
+        <h2 className="text-2xl font-bold uppercase tracking-wide text-black">
+          {reportMode === 'leave_summary' 
+            ? 'Individual Attendance & Leave Summary' 
+            : `Company ${reportMode === 'weekly' ? 'Weekly' : 'Monthly'} Payroll Ledger`}
+        </h2>
+        {reportMode === 'leave_summary' && leaveSummaryData ? (
+          <>
+            <p className="text-sm text-slate-700 mt-1">Employee: {leaveSummaryData.employee.name} ({leaveSummaryData.employee.email})</p>
+            <p className="text-sm text-slate-700">Department: {leaveSummaryData.employee.department}</p>
+          </>
+        ) : null}
+        <p className="text-sm text-slate-700 mt-0.5">Statement Period: {reportPeriodLabel}</p>
         <p className="text-[10px] text-slate-500">Generated on: {new Date().toLocaleString()}</p>
       </div>
 
-      {/* Report Table */}
-      <div className="glass-panel rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse custom-table">
-            <thead>
-              <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400">
-                <th className="px-6 py-4">Employee</th>
-                {user.is_admin && <th className="px-6 py-4">Department</th>}
-                <th className="px-6 py-4 text-center">Days Worked</th>
-                <th className="px-6 py-4 text-center">Half Days</th>
-                <th className="px-6 py-4 text-center">Violation Points</th>
-                <th className="px-6 py-4 text-right">Gross Allowance</th>
-                <th className="px-6 py-4 text-right">Deductions</th>
-                {reportMode === 'monthly' && <th className="px-6 py-4 text-right">Perfect Reward</th>}
-                <th className="px-6 py-4 text-right">Net Take-Home Payout</th>
-                {user.is_admin && <th className="px-6 py-4 text-center no-print">Actions</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {payrollList.length === 0 ? (
-                <tr>
-                  <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 10 : 9) : (reportMode === 'monthly' ? 8 : 7)} className="px-6 py-10 text-center text-slate-500 text-sm">
-                    No payroll details logged for this period.
-                  </td>
-                </tr>
-              ) : (
-                payrollList.map(item => (
-                  <tr key={item.id} className="hover:bg-slate-900/30 transition">
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-white block print:text-black">{item.name}</span>
-                      <span className="text-slate-500 text-[11px] print:text-slate-600">{item.email}</span>
-                    </td>
-                    {user.is_admin && (
-                      <td className="px-6 py-4">
-                        <span className="text-slate-300 text-sm print:text-black">{item.department}</span>
+      {/* Render Leave Summary Mode */}
+      {reportMode === 'leave_summary' && leaveSummaryData && (
+        <div className="space-y-6">
+          {/* Inverted Pyramid Metric Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="glass-panel p-4 rounded-xl border border-emerald-500/20 text-center">
+              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">Present</span>
+              <h4 className="text-2xl font-extrabold text-white mt-1">{leaveSummaryData.presentCount}</h4>
+            </div>
+            <div className="glass-panel p-4 rounded-xl border border-amber-500/20 text-center">
+              <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider block">Half Day</span>
+              <h4 className="text-2xl font-extrabold text-white mt-1">{leaveSummaryData.halfDayCount}</h4>
+            </div>
+            <div className="glass-panel p-4 rounded-xl border border-blue-500/20 text-center">
+              <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider block">Rest Day</span>
+              <h4 className="text-2xl font-extrabold text-white mt-1">{leaveSummaryData.restDayCount}</h4>
+            </div>
+            <div className="glass-panel p-4 rounded-xl border border-violet-500/20 text-center">
+              <span className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider block">Medical Leave</span>
+              <h4 className="text-2xl font-extrabold text-white mt-1">{leaveSummaryData.medicalCount}</h4>
+            </div>
+            <div className="glass-panel p-4 rounded-xl border border-rose-500/20 text-center">
+              <span className="text-[10px] font-semibold text-rose-400 uppercase tracking-wider block">Casual Leave</span>
+              <h4 className="text-2xl font-extrabold text-white mt-1">{leaveSummaryData.casualCount}</h4>
+            </div>
+            <div className="glass-panel p-4 rounded-xl border border-slate-500/20 text-center">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Absences / Leaves</span>
+              <h4 className="text-2xl font-extrabold text-rose-400 mt-1">{leaveSummaryData.totalLeaves}</h4>
+            </div>
+          </div>
+
+          {/* Details Table */}
+          <div className="glass-panel rounded-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-800 flex justify-between items-center no-print">
+              <h3 className="text-md font-display font-bold text-white">Attendance Log Details ({leaveSummaryData.totalDays} records)</h3>
+              <div className="text-xs text-slate-400">Showing logs in selected range</div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse custom-table">
+                <thead>
+                  <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                    <th className="px-6 py-3.5">Date</th>
+                    <th className="px-6 py-3.5">ISO Week Range</th>
+                    <th className="px-6 py-3.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-sm">
+                  {leaveSummaryData.records.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-10 text-center text-slate-500">
+                        No attendance records found for this employee in the selected date range.
                       </td>
-                    )}
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-slate-300 text-sm font-semibold print:text-black">{item.daysWorked} Days</span>
+                    </tr>
+                  ) : (
+                    leaveSummaryData.records.map(record => (
+                      <tr key={record.id} className="hover:bg-slate-900/20 transition">
+                        <td className="px-6 py-3.5 font-semibold text-white print:text-black">
+                          {record.date}
+                        </td>
+                        <td className="px-6 py-3.5 text-slate-300 print:text-black">
+                          {getWeekRange(record.date)}
+                        </td>
+                        <td className="px-6 py-3.5 text-center">
+                          {getStatusBadge(record.status)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Render Ledger Mode (Weekly / Monthly) */}
+      {reportMode !== 'leave_summary' && (
+        <div className="glass-panel rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse custom-table">
+              <thead>
+                <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400">
+                  <th className="px-6 py-4">Employee</th>
+                  {user.is_admin && <th className="px-6 py-4">Department</th>}
+                  <th className="px-6 py-4 text-center">Days Worked</th>
+                  <th className="px-6 py-4 text-center">Half Days</th>
+                  <th className="px-6 py-4 text-center">Violation Points</th>
+                  <th className="px-6 py-4 text-right">Gross Allowance</th>
+                  <th className="px-6 py-4 text-right">Deductions</th>
+                  {reportMode === 'monthly' && <th className="px-6 py-4 text-right">Perfect Reward</th>}
+                  <th className="px-6 py-4 text-right">Net Take-Home Payout</th>
+                  {user.is_admin && <th className="px-6 py-4 text-center no-print">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {payrollList.length === 0 ? (
+                  <tr>
+                    <td colSpan={user.is_admin ? (reportMode === 'monthly' ? 10 : 9) : (reportMode === 'monthly' ? 8 : 7)} className="px-6 py-10 text-center text-slate-500 text-sm">
+                      No payroll details logged for this period.
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-slate-300 text-sm font-semibold print:text-black">{item.halfDays} Days</span>
+                  </tr>
+                ) : (
+                  payrollList.map(item => (
+                    <tr key={item.id} className="hover:bg-slate-900/30 transition">
+                      <td className="px-6 py-4">
+                        <span className="font-semibold text-white block print:text-black">{item.name}</span>
+                        <span className="text-slate-500 text-[11px] print:text-slate-600">{item.email}</span>
+                      </td>
+                      {user.is_admin && (
+                        <td className="px-6 py-4">
+                          <span className="text-slate-300 text-sm print:text-black">{item.department}</span>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-slate-300 text-sm font-semibold print:text-black">{item.daysWorked} Days</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-slate-300 text-sm font-semibold print:text-black">{item.halfDays} Days</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          item.totalPoints > 2 
+                            ? 'bg-rose-950/40 text-rose-400 print:text-rose-700' 
+                            : 'bg-slate-900 text-slate-400 print:text-slate-700'
+                        }`}>
+                          {item.totalPoints} Pts
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-slate-300 print:text-black">
+                        Rs. {item.totalAllowance.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-rose-400 print:text-rose-700">
+                        -Rs. {item.totalDeductions.toLocaleString()}
+                      </td>
+                      {reportMode === 'monthly' && (
+                        <td className="px-6 py-4 text-right font-mono text-sm text-emerald-400 print:text-emerald-700">
+                          {item.reward > 0 ? `+Rs. ${item.reward.toLocaleString()}` : 'Rs. 0'}
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-right font-mono text-sm font-bold text-emerald-400 print:text-emerald-700">
+                        Rs. {item.netPay.toLocaleString()}
+                      </td>
+                      {user.is_admin && (
+                        <td className="px-6 py-4 text-center no-print">
+                          <div className="flex items-center justify-center gap-1.5 mx-auto">
+                            <button
+                              onClick={() => handleSendEmail(item)}
+                              className="p-2 bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-xs transition-all duration-150"
+                              title="Email Summary"
+                            >
+                              ✉️
+                            </button>
+                            <button
+                              onClick={() => handleCopySummary(item)}
+                              className="p-2 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition-all duration-150"
+                              title="Copy Summary to Clipboard"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {payrollList.length > 0 && (
+                <tfoot>
+                  <tr className="bg-slate-950/40 font-bold border-t-2 border-slate-800 text-white print:text-black print:border-black">
+                    <td colSpan={user.is_admin ? 5 : 4} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
+                      Payroll Ledger Totals
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        item.totalPoints > 2 
-                          ? 'bg-rose-950/40 text-rose-400 print:text-rose-700' 
-                          : 'bg-slate-900 text-slate-400 print:text-slate-700'
-                      }`}>
-                        {item.totalPoints} Pts
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-sm text-slate-300 print:text-black">
-                      Rs. {item.totalAllowance.toLocaleString()}
+                    <td className="px-6 py-4 text-right font-mono text-sm">
+                      Rs. {summaryTotals.allowances.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-sm text-rose-400 print:text-rose-700">
-                      -Rs. {item.totalDeductions.toLocaleString()}
+                      -Rs. {summaryTotals.deductions.toLocaleString()}
                     </td>
                     {reportMode === 'monthly' && (
                       <td className="px-6 py-4 text-right font-mono text-sm text-emerald-400 print:text-emerald-700">
-                        {item.reward > 0 ? `+Rs. ${item.reward.toLocaleString()}` : 'Rs. 0'}
+                        Rs. {summaryTotals.reward.toLocaleString()}
                       </td>
                     )}
-                    <td className="px-6 py-4 text-right font-mono text-sm font-bold text-emerald-400 print:text-emerald-700">
-                      Rs. {item.netPay.toLocaleString()}
-                    </td>
-                    {user.is_admin && (
-                      <td className="px-6 py-4 text-center no-print">
-                        <div className="flex items-center justify-center gap-1.5 mx-auto">
-                          <button
-                            onClick={() => handleSendEmail(item)}
-                            className="p-2 bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-xs transition-all duration-150"
-                            title="Email Summary"
-                          >
-                            ✉️
-                          </button>
-                          <button
-                            onClick={() => handleCopySummary(item)}
-                            className="p-2 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition-all duration-150"
-                            title="Copy Summary to Clipboard"
-                          >
-                            📋
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-            {payrollList.length > 0 && (
-              <tfoot>
-                <tr className="bg-slate-950/40 font-bold border-t-2 border-slate-800 text-white print:text-black print:border-black">
-                  <td colSpan={user.is_admin ? 5 : 4} className="px-6 py-4 text-left uppercase tracking-wide text-xs text-slate-400 print:text-black">
-                    Payroll Ledger Totals
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-sm">
-                    Rs. {summaryTotals.allowances.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-sm text-rose-400 print:text-rose-700">
-                    -Rs. {summaryTotals.deductions.toLocaleString()}
-                  </td>
-                  {reportMode === 'monthly' && (
                     <td className="px-6 py-4 text-right font-mono text-sm text-emerald-400 print:text-emerald-700">
-                      Rs. {summaryTotals.reward.toLocaleString()}
+                      Rs. {summaryTotals.net.toLocaleString()}
                     </td>
-                  )}
-                  <td className="px-6 py-4 text-right font-mono text-sm text-emerald-400 print:text-emerald-700">
-                    Rs. {summaryTotals.net.toLocaleString()}
-                  </td>
-                  {user.is_admin && <td className="no-print"></td>}
-                </tr>
-              </tfoot>
-            )}
-          </table>
+                    {user.is_admin && <td className="no-print"></td>}
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
